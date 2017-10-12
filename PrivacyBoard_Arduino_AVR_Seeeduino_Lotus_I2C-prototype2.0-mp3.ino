@@ -19,17 +19,8 @@ static int8_t Send_buf[8] = {0}; // Buffer for Send commands.  // BETTER LOCALLY
 
 void setup() {
   mp3.begin(9600); //connect to mp3
+  commandMP3(0x0C, 0x00); //reset
 
-  startMP3();
-
-  Send_buf[3] = 0X0C;//yes
-  Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-  Send_buf[5] = (int8_t)(0x00 >> 8);  //datah
-  Send_buf[6] = (int8_t)(0x00);       //datal
-  Send_buf[7] = 0xef;   //
-  for (uint8_t i = 0; i < 8; i++)  {
-    mp3.write(Send_buf[i]) ;
-  }
   //=====================================================
   pinMode(button1, INPUT);               //knop 1 is een input
   pinMode(buzzer, OUTPUT);               //Buzzer is een output
@@ -222,29 +213,11 @@ void loop() {
     vraag = random(1, 3);
     if (vraag == 1) {
       vraagGenerate();    //ff spannend maken
-      startMP3();
+      commandMP3(0x0F, 0x0101); //vraag1
 
-      Send_buf[3] = 0X17;//
-      Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-      Send_buf[5] = (int8_t)(0x0101 >> 8);  //datah
-      Send_buf[6] = (int8_t)(0x0101);       //datal
-      Send_buf[7] = 0xef;   //
-      for (uint8_t i = 0; i < 8; i++)  {
-        mp3.write(Send_buf[i]) ;
-      }
-
-      delay(2000);
-      startMP3();
-
-      Send_buf[3] = 0X0C;//yes
-      Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-      Send_buf[5] = (int8_t)(0x00 >> 8);  //datah
-      Send_buf[6] = (int8_t)(0x00);       //datal
-      Send_buf[7] = 0xef;   //
-      for (uint8_t i = 0; i < 8; i++)  {
-        mp3.write(Send_buf[i]) ;
-      }
-      vraagstelling = 2;
+      delay(5000);
+      commandMP3(0x0C, 0x00); //reset
+      vraagstelling = 1;
 
       if (vraagstelling == 1) {
         displayLCD("Knop 1 = A", "Knop 2 = B");
@@ -257,26 +230,18 @@ void loop() {
           vraagFout();
           startMP3();
 
-          Send_buf[3] = 0X17;//
-          Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-          Send_buf[5] = (int8_t)(0x0101 >> 8);  //datah
-          Send_buf[6] = (int8_t)(0x0101);       //datal
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0102 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0102);       //datal
           Send_buf[7] = 0xef;   //
           for (uint8_t i = 0; i < 8; i++)  {
             mp3.write(Send_buf[i]) ;
           }
 
           delay(2000);
-          startMP3();
+          commandMP3(0x0C, 0x00); //reset
 
-          Send_buf[3] = 0X0C;//yes
-          Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-          Send_buf[5] = (int8_t)(0x00 >> 8);  //datah
-          Send_buf[6] = (int8_t)(0x00);       //datal
-          Send_buf[7] = 0xef;   //
-          for (uint8_t i = 0; i < 8; i++)  {
-            mp3.write(Send_buf[i]) ;
-          }
           vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
 
         }
@@ -285,10 +250,10 @@ void loop() {
           vraagGoed();
           startMP3();
 
-          Send_buf[3] = 0X17;//
-          Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-          Send_buf[5] = (int8_t)(0x0101 >> 8);  //datah
-          Send_buf[6] = (int8_t)(0x0101);       //datal
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0102 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0102);       //datal
           Send_buf[7] = 0xef;   //
           for (uint8_t i = 0; i < 8; i++)  {
             mp3.write(Send_buf[i]) ;
@@ -296,15 +261,8 @@ void loop() {
 
           delay(2000);
 
-          startMP3();
-          Send_buf[3] = 0X0C;//yes
-          Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-          Send_buf[5] = (int8_t)(0x00 >> 8);  //datah
-          Send_buf[6] = (int8_t)(0x00);       //datal
-          Send_buf[7] = 0xef;   //
-          for (uint8_t i = 0; i < 8; i++)  {
-            mp3.write(Send_buf[i]) ;
-          }
+          commandMP3(0x0C, 0x00); //reset
+
           vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
         }
 
@@ -324,8 +282,8 @@ void loop() {
       vraagGenerate();    //ff spannend maken
       startMP3();
 
-      Send_buf[3] = 0X17;//
-      Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
       Send_buf[5] = (int8_t)(0x0201 >> 8);  //datah
       Send_buf[6] = (int8_t)(0x0201);       //datal
       Send_buf[7] = 0xef;   //
@@ -334,16 +292,8 @@ void loop() {
       }
 
       delay(2000);
-      startMP3();
+      commandMP3(0x0C, 0x00); //reset
 
-      Send_buf[3] = 0X0C;//yes
-      Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-      Send_buf[5] = (int8_t)(0x00 >> 8);  //datah
-      Send_buf[6] = (int8_t)(0x00);       //datal
-      Send_buf[7] = 0xef;   //
-      for (uint8_t i = 0; i < 8; i++)  {
-        mp3.write(Send_buf[i]) ;
-      }
       vraagstelling = 2;
 
       if (vraagstelling == 2) {
@@ -357,26 +307,19 @@ void loop() {
           vraagFout();
           startMP3();
 
-          Send_buf[3] = 0X17;//
-          Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-          Send_buf[5] = (int8_t)(0x0201 >> 8);  //datah
-          Send_buf[6] = (int8_t)(0x0201);       //datal
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0202 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0202);       //datal
           Send_buf[7] = 0xef;   //
           for (uint8_t i = 0; i < 8; i++)  {
             mp3.write(Send_buf[i]) ;
           }
 
           delay(2000);
-          startMP3();
 
-          Send_buf[3] = 0X0C;//yes
-          Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-          Send_buf[5] = (int8_t)(0x00 >> 8);  //datah
-          Send_buf[6] = (int8_t)(0x00);       //datal
-          Send_buf[7] = 0xef;   //
-          for (uint8_t i = 0; i < 8; i++)  {
-            mp3.write(Send_buf[i]) ;
-          }
+          commandMP3(0x0C, 0x00); //reset
+
           vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
 
         }
@@ -385,10 +328,10 @@ void loop() {
           vraagGoed();
           startMP3();
 
-          Send_buf[3] = 0X17;//
-          Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-          Send_buf[5] = (int8_t)(0x0201 >> 8);  //datah
-          Send_buf[6] = (int8_t)(0x0201);       //datal
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0202 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0202);       //datal
           Send_buf[7] = 0xef;   //
           for (uint8_t i = 0; i < 8; i++)  {
             mp3.write(Send_buf[i]) ;
@@ -396,15 +339,8 @@ void loop() {
 
           delay(2000);
 
-          startMP3();
-          Send_buf[3] = 0X0C;//yes
-          Send_buf[4] = 0x01;   // 0x00 NO, 0x01 feedback
-          Send_buf[5] = (int8_t)(0x00 >> 8);  //datah
-          Send_buf[6] = (int8_t)(0x00);       //datal
-          Send_buf[7] = 0xef;   //
-          for (uint8_t i = 0; i < 8; i++)  {
-            mp3.write(Send_buf[i]) ;
-          }
+          commandMP3(0x0C, 0x00); //reset
+
           vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
 
         }
@@ -505,9 +441,23 @@ void displayLCD( char* line1, char* line2) {    //De variabele doet het volgende
 }
 
 
-
 void startMP3() {
-  Send_buf[0] = 0x7e;   //
-  Send_buf[1] = 0xff;   //
-  Send_buf[2] = 0x06;   // Len
+  Send_buf[0] = 0x7e;   // Open command
+  Send_buf[1] = 0xff;   // Version
+  Send_buf[2] = 0x06;   // Length
+}
+
+
+void commandMP3(int8_t command, int8_t action) {
+  Send_buf[0] = 0x7e;   // Open command
+  Send_buf[1] = 0xff;   // Version
+  Send_buf[2] = 0x06;   // Length
+  Send_buf[3] = command;//yes
+  Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+  Send_buf[5] = (int8_t)(action >> 8);  //datah
+  Send_buf[6] = (int8_t)(action);       //datal
+  Send_buf[7] = 0xef;   //
+  for (uint8_t i = 0; i < 8; i++)  {
+    mp3.write(Send_buf[i]) ;
+  }
 }
