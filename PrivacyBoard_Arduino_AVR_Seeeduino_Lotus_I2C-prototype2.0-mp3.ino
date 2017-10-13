@@ -89,7 +89,7 @@ void setup() {
 void loop() {
   randomSeed(analogRead(0));                                //HOU DIE RANDOM FUNCTIE NOU VERDOMME RANDOM!!!!!!!!!!
 
-  if (digitalRead(button1) == HIGH) {
+  if (digitalRead(button1) == HIGH) {       //ga naar uitleg
     if (spelmodus == 0) {
       tone(buzzer, 2600);               //Laat piepje horen van 2600Hz
       delay(200);                       //voor 200ms
@@ -216,8 +216,6 @@ void loop() {
       delay(100);
       noTone(buzzer);
       delay(1500);
-      playMusic();
-
       spelmodus = 2;
     }
 
