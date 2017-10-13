@@ -16,11 +16,33 @@ SoftwareSerial mp3(7, 8);
 
 static int8_t Send_buf[8] = {0}; // Buffer for Send commands.  // BETTER LOCALLY
 //=====================================================
+// Dit moet je doen voor deze functie om text op het lced schermpje te laten zien. vet handig.
+void displayLCD( char* line1, char* line2) {    //De variabele doet het volgende
+  lcd.clear();                                  //scherm leeghalen
+  lcd.setCursor(0, 0);                          //cursor plaatsen op 1e blokje, 1e regel
+  lcd.print(line1);                             //print 1e tekst op 1e regel
+  lcd.setCursor(0, 1);                          //cursor plaatsen op 1e blokje, 2e regel
+  lcd.print(line2);                             //print 2e tekst op 1e regel
+}
+
+
+void resetMP3() {
+  Send_buf[0] = 0x7e;   // Open command
+  Send_buf[1] = 0xff;   // Version
+  Send_buf[2] = 0x06;   // Length
+  Send_buf[3] = 0x0C;//yes
+  Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+  Send_buf[5] = (int8_t)(0x00 >> 8);  //datah
+  Send_buf[6] = (int8_t)(0x00);       //datal
+  Send_buf[7] = 0xef;   //
+  for (uint8_t i = 0; i < 8; i++)  {
+    mp3.write(Send_buf[i]) ;
+  }
+}
 
 void setup() {
   mp3.begin(9600); //connect to mp3
-  commandMP3(0x0C, 0x00); //reset
-
+  resetMP3(); //reset de mp3 speler, voor als er misschien nog muziek afspeelt ofzo vet irritant is dat als dat zo is
   //=====================================================
   pinMode(button1, INPUT);               //knop 1 is een input
   pinMode(buzzer, OUTPUT);               //Buzzer is een output
@@ -30,6 +52,17 @@ void setup() {
   lcd.clear();                           //maak lcd scherm leeg
   lcd.begin(16, 2);                      //stel het aantal rijen en kolommen in op de lcd die je gaat gebruiken, in dit geval alles
   //=====================================================
+  Send_buf[0] = 0x7e;   // Open command
+  Send_buf[1] = 0xff;   // Version
+  Send_buf[2] = 0x06;   // Length
+  Send_buf[3] = 0x0F;//yes
+  Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+  Send_buf[5] = (int8_t)(0x0B01 >> 8);  //datah
+  Send_buf[6] = (int8_t)(0x0B01);       //datal
+  Send_buf[7] = 0xef;   //
+  for (uint8_t i = 0; i < 8; i++)  {
+    mp3.write(Send_buf[i]) ;
+  }
   displayLCD("###Welkom bij###", "##PrivacyBoard##"); //titelscherm
   tone(buzzer, 3500);
   delay(300);
@@ -112,12 +145,16 @@ void loop() {
   }
 
   if (spelmodus == 2) {                 // VRAAG DOBBEL MAINSCREEN - IDLE
+    playMusic();
+
     lcd.setCursor(0, 0);
     lcd.print(F("Knop 1 = DOBBEL"));
     lcd.setCursor(0, 1);
     lcd.print(F("Knop 2 = VRAAG "));
     lcd.blink();
-    delay(1000);
+    while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+      //doe niks
+    }
   }
 
 
@@ -179,6 +216,8 @@ void loop() {
       delay(100);
       noTone(buzzer);
       delay(1500);
+      playMusic();
+
       spelmodus = 2;
     }
 
@@ -207,30 +246,40 @@ void loop() {
 
 
 
-  //=================================================
 
   if (spelmodus == 10) {
-    vraag = random(1, 3);
+    vraag = random(1, 11);
+
+
+    //=================vraag 1================================
+
     if (vraag == 1) {
       vraagGenerate();    //ff spannend maken
-      commandMP3(0x0F, 0x0101); //vraag1
-
-      delay(5000);
-      commandMP3(0x0C, 0x00); //reset
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0x0F;//yes
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0A01 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0A01);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
       vraagstelling = 1;
 
       if (vraagstelling == 1) {
-        displayLCD("Knop 1 = A", "Knop 2 = B");
+        displayLCD("Knop 1 = WAAR", "Knop 2 = ONWAAR");
 
         while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
           //doe niks
         }
 
         if (digitalRead(button1) == HIGH) {
-          vraagFout();
-          startMP3();
-
-          Send_buf[3] = 0X0F;//
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0x0F;//yes
           Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
           Send_buf[5] = (int8_t)(0x0102 >> 8);  //datah
           Send_buf[6] = (int8_t)(0x0102);       //datal
@@ -238,19 +287,16 @@ void loop() {
           for (uint8_t i = 0; i < 8; i++)  {
             mp3.write(Send_buf[i]) ;
           }
-
-          delay(2000);
-          commandMP3(0x0C, 0x00); //reset
-
+          vraagFout();
+          delay(10000);
           vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
 
         }
 
         if (digitalRead(button2) == HIGH) {
-          vraagGoed();
-          startMP3();
-
-          Send_buf[3] = 0X0F;//
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0x0F;//yes
           Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
           Send_buf[5] = (int8_t)(0x0102 >> 8);  //datah
           Send_buf[6] = (int8_t)(0x0102);       //datal
@@ -258,11 +304,8 @@ void loop() {
           for (uint8_t i = 0; i < 8; i++)  {
             mp3.write(Send_buf[i]) ;
           }
-
-          delay(2000);
-
-          commandMP3(0x0C, 0x00); //reset
-
+          vraagGoed();
+          delay(10000);
           vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
         }
 
@@ -275,13 +318,14 @@ void loop() {
 
 
 
-    //======================================================================================
+    //=====================vraag 2=================================================================
 
 
     if (vraag == 2) {
       vraagGenerate();    //ff spannend maken
-      startMP3();
-
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
       Send_buf[3] = 0X0F;//
       Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
       Send_buf[5] = (int8_t)(0x0201 >> 8);  //datah
@@ -290,10 +334,6 @@ void loop() {
       for (uint8_t i = 0; i < 8; i++)  {
         mp3.write(Send_buf[i]) ;
       }
-
-      delay(2000);
-      commandMP3(0x0C, 0x00); //reset
-
       vraagstelling = 2;
 
       if (vraagstelling == 2) {
@@ -304,9 +344,9 @@ void loop() {
         }
 
         if (digitalRead(button1) == HIGH) {
-          vraagFout();
-          startMP3();
-
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
           Send_buf[3] = 0X0F;//
           Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
           Send_buf[5] = (int8_t)(0x0202 >> 8);  //datah
@@ -316,18 +356,16 @@ void loop() {
             mp3.write(Send_buf[i]) ;
           }
 
-          delay(2000);
-
-          commandMP3(0x0C, 0x00); //reset
-
+          vraagFout();
+          delay(15000);
           vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
 
         }
 
         if (digitalRead(button2) == HIGH) {
-          vraagGoed();
-          startMP3();
-
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
           Send_buf[3] = 0X0F;//
           Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
           Send_buf[5] = (int8_t)(0x0202 >> 8);  //datah
@@ -337,10 +375,8 @@ void loop() {
             mp3.write(Send_buf[i]) ;
           }
 
-          delay(2000);
-
-          commandMP3(0x0C, 0x00); //reset
-
+          vraagGoed();
+          delay(15000);
           vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
 
         }
@@ -351,11 +387,604 @@ void loop() {
         delay(250);                         //Even wachten totdat je verdergaat
       }
     }
-  }
 
 
 
-}//loop
+    //=====================vraag 3=================================================================
+
+
+    if (vraag == 3) {
+      vraagGenerate();    //ff spannend maken
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0301 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0301);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
+      vraagstelling = 3;
+
+      if (vraagstelling == 3) {
+        displayLCD("Knop 1 = WAAR", "Knop 2 = ONWAAR");
+
+        while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+          //doe niks
+        }
+
+        if (digitalRead(button1) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0302 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0302);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagFout();
+          delay(12000);
+          vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        if (digitalRead(button2) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0302 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0302);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagGoed();
+          delay(12000);
+          vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        else {
+          //idle
+        }
+        delay(250);                         //Even wachten totdat je verdergaat
+      }
+    }
+
+
+
+
+    //====================vraag 4==================================================================
+
+
+    if (vraag == 4) {
+      vraagGenerate();    //ff spannend maken
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0401 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0401);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
+      vraagstelling = 4;
+
+      if (vraagstelling == 4) {
+        displayLCD("Knop 1 = WAAR", "Knop 2 = ONWAAR");
+
+        while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+          //doe niks
+        }
+
+        if (digitalRead(button1) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0402 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0402);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagFout();
+          delay(12000);
+          vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        if (digitalRead(button2) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0402 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0402);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagGoed();
+          delay(12000);
+          vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        else {
+          //idle
+        }
+        delay(250);                         //Even wachten totdat je verdergaat
+      }
+    }
+
+
+
+
+    //===================vraag 5===================================================================
+
+
+    if (vraag == 5) {
+      vraagGenerate();    //ff spannend maken
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0501 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0501);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
+      vraagstelling = 5;
+
+      if (vraagstelling == 5) {
+        displayLCD("Knop 1 = WAAR", "Knop 2 = ONWAAR");
+
+        while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+          //doe niks
+        }
+
+        if (digitalRead(button1) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0502 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0502);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagFout();
+          delay(15000);
+          vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        if (digitalRead(button2) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0502 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0502);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagGoed();
+          delay(15000);
+          vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        else {
+          //idle
+        }
+        delay(250);                         //Even wachten totdat je verdergaat
+      }
+    }
+
+
+
+
+
+    //==============vraag 6========================================================================
+
+
+    if (vraag == 6) {
+      vraagGenerate();    //ff spannend maken
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0601 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0601);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
+      vraagstelling = 6;
+
+      if (vraagstelling == 6) {
+        displayLCD("Knop 1 = WAAR", "Knop 2 = ONWAAR");
+
+        while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+          //doe niks
+        }
+
+        if (digitalRead(button1) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0602 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0602);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagFout();
+          delay(15000);
+          vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        if (digitalRead(button2) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0602 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0602);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagGoed();
+          delay(15000);
+          vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        else {
+          //idle
+        }
+        delay(250);                         //Even wachten totdat je verdergaat
+      }
+    }
+
+
+
+
+    //============vraag 7==========================================================================
+
+
+    if (vraag == 7) {
+      vraagGenerate();    //ff spannend maken
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0701 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0701);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
+      vraagstelling = 7;
+
+      if (vraagstelling == 7) {
+        displayLCD("Knop 1 = WAAR", "Knop 2 = ONWAAR");
+
+        while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+          //doe niks
+        }
+
+        if (digitalRead(button1) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0702 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0702);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagFout();
+          delay(10000);
+          vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        if (digitalRead(button2) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0702 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0702);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagGoed();
+          delay(10000);
+          vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        else {
+          //idle
+        }
+        delay(250);                         //Even wachten totdat je verdergaat
+      }
+    }
+
+
+
+
+
+    //============vraag 8==========================================================================
+
+
+    if (vraag == 8) {
+      vraagGenerate();    //ff spannend maken
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0801 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0801);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
+      vraagstelling = 8;
+
+      if (vraagstelling == 8) {
+        displayLCD("Knop 1 = MEER", "Knop 2 = MINDER");
+
+        while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+          //doe niks
+        }
+
+        if (digitalRead(button1) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0802 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0802);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagGoed();
+          delay(12000);
+          vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        if (digitalRead(button2) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0802 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0802);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagFout();
+          delay(12000);
+          vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        else {
+          //idle
+        }
+        delay(250);                         //Even wachten totdat je verdergaat
+      }
+    }
+
+
+
+
+    //==============vraag 9========================================================================
+
+
+    if (vraag == 9) {
+      vraagGenerate();    //ff spannend maken
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0901 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0901);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
+      vraagstelling = 9;
+
+      if (vraagstelling == 9) {
+        displayLCD("Knop 1 = WAAR", "Knop 2 = ONWAAR");
+
+        while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+          //doe niks
+        }
+
+        if (digitalRead(button1) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0902 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0902);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagFout();
+          delay(15000);
+          vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        if (digitalRead(button2) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0902 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0902);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagGoed();
+          delay(15000);
+          vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        else {
+          //idle
+        }
+        delay(250);                         //Even wachten totdat je verdergaat
+      }
+    }
+
+
+
+
+
+
+    //================vraag 10======================================================================
+
+
+    if (vraag == 10) {
+      vraagGenerate();    //ff spannend maken
+      Send_buf[0] = 0x7e;   // Open command
+      Send_buf[1] = 0xff;   // Version
+      Send_buf[2] = 0x06;   // Length
+      Send_buf[3] = 0X0F;//
+      Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+      Send_buf[5] = (int8_t)(0x0A01 >> 8);  //datah
+      Send_buf[6] = (int8_t)(0x0A01);       //datal
+      Send_buf[7] = 0xef;   //
+      for (uint8_t i = 0; i < 8; i++)  {
+        mp3.write(Send_buf[i]) ;
+      }
+      vraagstelling = 10;
+
+      if (vraagstelling == 10) {
+        displayLCD("Knop 1 = WAAR", "Knop 2 = ONWAAR");
+
+        while (digitalRead(button1) == LOW && digitalRead(button2) == LOW) { //Zolang de knoppen niet worden ingedrukt, wacht dan pls
+          //doe niks
+        }
+
+        if (digitalRead(button1) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0A02 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0A02);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagFout();
+          delay(12000);
+          vraagBack();                                              //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        if (digitalRead(button2) == HIGH) {
+          Send_buf[0] = 0x7e;   // Open command
+          Send_buf[1] = 0xff;   // Version
+          Send_buf[2] = 0x06;   // Length
+          Send_buf[3] = 0X0F;//
+          Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+          Send_buf[5] = (int8_t)(0x0A02 >> 8);  //datah
+          Send_buf[6] = (int8_t)(0x0A02);       //datal
+          Send_buf[7] = 0xef;   //
+          for (uint8_t i = 0; i < 8; i++)  {
+            mp3.write(Send_buf[i]) ;
+          }
+
+          vraagGoed();
+          delay(12000);
+          vraagBack();          //ga terug naar DOBBEL / VRAAG MENU en laat piepje horen
+
+        }
+
+        else {
+          //idle
+        }
+        delay(250);                         //Even wachten totdat je verdergaat
+      }
+    }
+    //====================einde vragen===========================================================
+
+
+  }//end vragenmodus
+
+
+} //end loop
+
+
+
+
 
 void vraagGoed() {                          //Dit doe je als je de vraag goed hebt beantwoord
   displayLCD("Je antwoord is...", "");
@@ -410,13 +1039,26 @@ void vraagBack() {
   tone(buzzer, 2600);
   delay(500);
   noTone(buzzer);
+  playMusic();
+
   vraag = 0;
   vraagstelling = 0; //RESET ALLE VARIABELE
   spelmodus = 2;
 }
 
 void vraagGenerate() {
-  displayLCD("Je vraag is...", "################");  //SPANNEND AFWACHTEN todat je vraag wordt laten zien
+  Send_buf[0] = 0x7e;   // Open command
+  Send_buf[1] = 0xff;   // Version
+  Send_buf[2] = 0x06;   // Length
+  Send_buf[3] = 0x0F;//yes
+  Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
+  Send_buf[5] = (int8_t)(0x0D01 >> 8);  //datah
+  Send_buf[6] = (int8_t)(0x0D01);       //datal
+  Send_buf[7] = 0xef;   //
+  for (uint8_t i = 0; i < 8; i++)  {
+    mp3.write(Send_buf[i]) ;
+  }
+  displayLCD("Je vraag is...", "(doe oortjes in)");  //SPANNEND AFWACHTEN todat je vraag wordt laten zien
   tone(buzzer, 3000);
   delay(200);
   tone(buzzer, 3500);
@@ -428,34 +1070,19 @@ void vraagGenerate() {
   tone(buzzer, 5000);
   delay(500);
   noTone(buzzer);
+  delay(3000);
+
 }
 
 
-// Dit moet je doen voor deze functie om text op het lced schermpje te laten zien. vet handig.
-void displayLCD( char* line1, char* line2) {    //De variabele doet het volgende
-  lcd.clear();                                  //scherm leeghalen
-  lcd.setCursor(0, 0);                          //cursor plaatsen op 1e blokje, 1e regel
-  lcd.print(line1);                             //print 1e tekst op 1e regel
-  lcd.setCursor(0, 1);                          //cursor plaatsen op 1e blokje, 2e regel
-  lcd.print(line2);                             //print 2e tekst op 1e regel
-}
-
-
-void startMP3() {
+void playMusic() {
   Send_buf[0] = 0x7e;   // Open command
   Send_buf[1] = 0xff;   // Version
   Send_buf[2] = 0x06;   // Length
-}
-
-
-void commandMP3(int8_t command, int8_t action) {
-  Send_buf[0] = 0x7e;   // Open command
-  Send_buf[1] = 0xff;   // Version
-  Send_buf[2] = 0x06;   // Length
-  Send_buf[3] = command;//yes
+  Send_buf[3] = 0x0F;//yes
   Send_buf[4] = 0x00;   // 0x00 NO, 0x01 feedback
-  Send_buf[5] = (int8_t)(action >> 8);  //datah
-  Send_buf[6] = (int8_t)(action);       //datal
+  Send_buf[5] = (int8_t)(0x0E01 >> 8);  //datah
+  Send_buf[6] = (int8_t)(0x0E01);       //datal
   Send_buf[7] = 0xef;   //
   for (uint8_t i = 0; i < 8; i++)  {
     mp3.write(Send_buf[i]) ;
